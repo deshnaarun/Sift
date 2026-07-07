@@ -2,7 +2,8 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<title>Sift</title>
+<title>SwiftSift</title>
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ccircle cx='50' cy='50' r='50' fill='%23f2891e'/%3E%3Ctext x='50' y='68' font-size='55' text-anchor='middle'%3E%F0%9F%8C%BE%3C/text%3E%3C/svg%3E">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Baloo+2:wght@500;700;800&family=Nunito+Sans:wght@400;600;700&display=swap" rel="stylesheet">
 <style>
@@ -28,6 +29,7 @@
   }
   .layout { display: flex; height: 100vh; }
 
+  /* Sidebar */
   .sidebar {
     width: 210px;
     background: linear-gradient(160deg, var(--orange) 0%, var(--orange-dark) 100%);
@@ -63,6 +65,7 @@
   }
   .nav-item:hover:not(.active) { color: #fff; padding-left: 26px; }
 
+  /* Right side: stats + chat stacked */
   .right {
     flex: 1;
     display: flex;
@@ -70,15 +73,22 @@
     padding: 26px 30px;
     min-width: 0;
   }
-  .top-bar { margin-bottom: 18px; }
+  .top-bar {
+    margin-bottom: 18px;
+  }
   .top-bar h2 {
     font-family: 'Baloo 2', sans-serif;
     font-weight: 700;
     font-size: 24px;
     margin: 0 0 3px 0;
   }
-  .top-bar .subtitle { color: var(--muted); font-size: 13px; margin: 0; }
+  .top-bar .subtitle {
+    color: var(--muted);
+    font-size: 13px;
+    margin: 0;
+  }
 
+  /* Stat cards */
   .stats {
     display: grid;
     grid-template-columns: repeat(4, 1fr);
@@ -93,7 +103,10 @@
     padding: 12px 14px;
     transition: transform 0.16s ease, box-shadow 0.16s ease;
   }
-  .stat-card:hover { transform: translateY(-3px); box-shadow: 0 8px 18px rgba(43, 27, 16, 0.08); }
+  .stat-card:hover {
+    transform: translateY(-3px);
+    box-shadow: 0 8px 18px rgba(43, 27, 16, 0.08);
+  }
   .stat-card.reply { border-color: #cfe0fd; }
   .stat-card.junk { border-color: #f9d6d3; }
   .stat-card.fyi { border-color: #cdeadd; }
@@ -103,6 +116,7 @@
   .stat-card.junk .stat-value { color: var(--junk); }
   .stat-card.fyi .stat-value { color: var(--fyi); }
 
+  /* Chat panel */
   .chat-panel {
     flex: 1;
     background: var(--card);
@@ -134,9 +148,15 @@
     to { opacity: 1; transform: translateY(0); }
   }
 
-  .typing-dots { display: flex; gap: 4px; padding: 4px 2px; }
+  .typing-dots {
+    display: flex;
+    gap: 4px;
+    padding: 4px 2px;
+  }
   .typing-dots span {
-    width: 6px; height: 6px; border-radius: 50%;
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
     background: var(--muted);
     animation: bounce 1.1s infinite ease-in-out;
   }
@@ -147,10 +167,15 @@
     30% { transform: translateY(-4px); opacity: 1; }
   }
   .avatar {
-    width: 28px; height: 28px; border-radius: 50%;
+    width: 28px;
+    height: 28px;
+    border-radius: 50%;
     background: var(--orange);
-    display: flex; align-items: center; justify-content: center;
-    font-size: 14px; flex-shrink: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 14px;
+    flex-shrink: 0;
   }
   .bubble {
     background: var(--cream);
@@ -161,7 +186,11 @@
     font-size: 14px;
     line-height: 1.5;
   }
-  .msg-row.user .bubble { background: var(--orange); color: #fff; border-color: var(--orange); }
+  .msg-row.user .bubble {
+    background: var(--orange);
+    color: #fff;
+    border-color: var(--orange);
+  }
 
   .email-card {
     background: #fff;
@@ -172,13 +201,27 @@
     transition: border-color 0.15s ease, transform 0.15s ease;
   }
   .email-card:first-child { margin-top: 0; }
-  .email-card:hover { border-color: var(--orange); transform: translateX(2px); }
-  .email-top { display: flex; justify-content: space-between; align-items: center; margin-bottom: 3px; }
+  .email-card:hover {
+    border-color: var(--orange);
+    transform: translateX(2px);
+  }
+  .email-top {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 3px;
+  }
   .email-sender { font-weight: 700; font-size: 13px; }
   .email-subject { font-size: 13px; margin-bottom: 3px; }
   .email-snippet { font-size: 12px; color: var(--muted); }
 
-  .badge { display: inline-block; padding: 2px 9px; border-radius: 999px; font-size: 10px; font-weight: 700; }
+  .badge {
+    display: inline-block;
+    padding: 2px 9px;
+    border-radius: 999px;
+    font-size: 10px;
+    font-weight: 700;
+  }
   .badge.reply { background: #dbe8ff; color: var(--reply); }
   .badge.junk { background: #fbdedb; color: var(--junk); }
   .badge.fyi { background: #d7f2e3; color: var(--fyi); }
@@ -198,7 +241,13 @@
   .quick-btn:hover { border-color: var(--orange); color: var(--orange); transform: translateY(-1px); }
   .quick-btn:active { transform: translateY(0); }
 
-  .input-bar { flex-shrink: 0; border-top: 2px solid var(--border); padding: 14px 18px; display: flex; gap: 10px; }
+  .input-bar {
+    flex-shrink: 0;
+    border-top: 2px solid var(--border);
+    padding: 14px 18px;
+    display: flex;
+    gap: 10px;
+  }
   #chatInput {
     flex: 1;
     border: 2px solid var(--border);
@@ -229,7 +278,7 @@
 
 <div class="layout">
   <div class="sidebar">
-    <div class="logo">📥 Sift</div>
+    <div class="logo">📥 SwiftSift</div>
     <div class="nav-item active">Overview</div>
     <div class="nav-item">Needs Reply</div>
     <div class="nav-item">Junk</div>
@@ -267,7 +316,7 @@
         <div class="msg-row bot">
           <div class="avatar">🌾</div>
           <div class="bubble">
-            Hey! I'm Sift. Ask me to check your inbox and I'll sort what needs a reply, what's junk, and what's just FYI.
+            Hey! I'm SwiftSift. Ask me to check your inbox and I'll sort what needs a reply, what's junk, and what's just FYI.
             <div class="quick-actions">
               <div class="quick-btn" onclick="sendQuick('Check my inbox')">Check my inbox</div>
             </div>
@@ -346,7 +395,7 @@
   function playChime() {
     try {
       const ctx = new (window.AudioContext || window.webkitAudioContext)();
-      const notes = [523.25, 659.25, 783.99];
+      const notes = [523.25, 659.25, 783.99]; // C5, E5, G5 — bright little chime
       notes.forEach((freq, i) => {
         const osc = ctx.createOscillator();
         const gain = ctx.createGain();
@@ -454,6 +503,7 @@
 
     showTyping();
 
+ 
     setTimeout(() => {
       hideTyping();
       const lower = text.toLowerCase();
