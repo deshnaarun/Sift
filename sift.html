@@ -284,13 +284,6 @@ TML
  
 <canvas id="confettiCanvas" style="position:fixed; top:0; left:0; width:100%; height:100%; pointer-events:none; z-index:999;"></canvas>
  
-<div id="loginScreen" style="height:100vh; display:flex; flex-direction:column; align-items:center; justify-content:center; text-align:center; padding:20px;">
-  <div style="font-family:'Baloo 2', sans-serif; font-size:40px; font-weight:800; color:var(--orange); margin-bottom:8px;">📥 SwiftSift</div>
-  <p style="color:var(--muted); font-size:15px; max-width:360px; margin-bottom:28px;">Sort your inbox, draft replies, and clean up junk — nothing sends or deletes without your say-so.</p>
-  <button id="googleSignInBtn" onclick="signInWithGoogle()" style="background:var(--orange); color:#fff; border:none; border-radius:999px; padding:12px 28px; font-size:15px; font-weight:700; cursor:pointer; box-shadow:0 3px 0 var(--orange-dark);">Sign in with Google</button>
-  <p style="color:var(--muted); font-size:12px; margin-top:14px;">You'll be asked to approve read, reply, and cleanup access to your Gmail.</p>
-</div>
- 
 <div class="layout" id="dashboard" style="display:none;">
   <div class="sidebar">
     <div class="logo">📥 SwiftSift</div>
@@ -348,7 +341,7 @@ TML
  
 <script>
   
-  const CLIENT_ID = "YOUR_CLIENT_ID_HERE.apps.googleusercontent.com";
+  const CLIENT_ID = "1019155607119-am2tsldmp30o9pkvgcggd0s87t8v0g64.apps.googleusercontent.com";
   const SCOPES = "https://www.googleapis.com/auth/gmail.readonly https://www.googleapis.com/auth/gmail.modify https://www.googleapis.com/auth/gmail.send";
  
   let accessToken = null;
@@ -368,7 +361,7 @@ TML
     });
     tokenClient.requestAccessToken();
   }
-  // ===== END GOOGLE SIGN-IN SETUP =====
+  
  
   const MOCK_EMAILS = [
     { sender: "Priya Shah", subject: "Q3 budget review — need your notes", snippet: "Can you send your section before Thursday's call?", category: "reply" },
