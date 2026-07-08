@@ -1,3 +1,4 @@
+TML
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -5,6 +6,7 @@
 <title>SwiftSift</title>
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ccircle cx='50' cy='50' r='50' fill='%23f2891e'/%3E%3Ctext x='50' y='68' font-size='55' text-anchor='middle'%3E%F0%9F%8C%BE%3C/text%3E%3C/svg%3E">
 <link rel="preconnect" href="https://fonts.googleapis.com">
+<script src="https://accounts.google.com/gsi/client" async defer></script>
 <link href="https://fonts.googleapis.com/css2?family=Baloo+2:wght@500;700;800&family=Nunito+Sans:wght@400;600;700&display=swap" rel="stylesheet">
 <style>
   :root {
@@ -28,7 +30,7 @@
     font-family: 'Nunito Sans', sans-serif;
   }
   .layout { display: flex; height: 100vh; }
-
+ 
   /* Sidebar */
   .sidebar {
     width: 210px;
@@ -64,7 +66,7 @@
     border-radius: 0 20px 20px 0;
   }
   .nav-item:hover:not(.active) { color: #fff; padding-left: 26px; }
-
+ 
   /* Right side: stats + chat stacked */
   .right {
     flex: 1;
@@ -87,7 +89,7 @@
     font-size: 13px;
     margin: 0;
   }
-
+ 
   /* Stat cards */
   .stats {
     display: grid;
@@ -115,7 +117,7 @@
   .stat-card.reply .stat-value { color: var(--reply); }
   .stat-card.junk .stat-value { color: var(--junk); }
   .stat-card.fyi .stat-value { color: var(--fyi); }
-
+ 
   /* Chat panel */
   .chat-panel {
     flex: 1;
@@ -142,12 +144,12 @@
     animation: fadeInUp 0.28s ease both;
   }
   .msg-row.user { justify-content: flex-end; }
-
+ 
   @keyframes fadeInUp {
     from { opacity: 0; transform: translateY(8px); }
     to { opacity: 1; transform: translateY(0); }
   }
-
+ 
   .typing-dots {
     display: flex;
     gap: 4px;
@@ -191,7 +193,7 @@
     color: #fff;
     border-color: var(--orange);
   }
-
+ 
   .email-card {
     background: #fff;
     border: 1px solid var(--border);
@@ -214,7 +216,7 @@
   .email-sender { font-weight: 700; font-size: 13px; }
   .email-subject { font-size: 13px; margin-bottom: 3px; }
   .email-snippet { font-size: 12px; color: var(--muted); }
-
+ 
   .badge {
     display: inline-block;
     padding: 2px 9px;
@@ -225,7 +227,7 @@
   .badge.reply { background: #dbe8ff; color: var(--reply); }
   .badge.junk { background: #fbdedb; color: var(--junk); }
   .badge.fyi { background: #d7f2e3; color: var(--fyi); }
-
+ 
   .quick-actions { display: flex; gap: 8px; margin-top: 10px; flex-wrap: wrap; }
   .quick-btn {
     background: #fff;
@@ -240,7 +242,7 @@
   }
   .quick-btn:hover { border-color: var(--orange); color: var(--orange); transform: translateY(-1px); }
   .quick-btn:active { transform: translateY(0); }
-
+ 
   .input-bar {
     flex-shrink: 0;
     border-top: 2px solid var(--border);
@@ -273,10 +275,17 @@
 </style>
 </head>
 <body>
-
+ 
 <canvas id="confettiCanvas" style="position:fixed; top:0; left:0; width:100%; height:100%; pointer-events:none; z-index:999;"></canvas>
-
-<div class="layout">
+ 
+<div id="loginScreen" style="height:100vh; display:flex; flex-direction:column; align-items:center; justify-content:center; text-align:center; padding:20px;">
+  <div style="font-family:'Baloo 2', sans-serif; font-size:40px; font-weight:800; color:var(--orange); margin-bottom:8px;">📥 SwiftSift</div>
+  <p style="color:var(--muted); font-size:15px; max-width:360px; margin-bottom:28px;">Sort your inbox, draft replies, and clean up junk — nothing sends or deletes without your say-so.</p>
+  <button id="googleSignInBtn" onclick="signInWithGoogle()" style="background:var(--orange); color:#fff; border:none; border-radius:999px; padding:12px 28px; font-size:15px; font-weight:700; cursor:pointer; box-shadow:0 3px 0 var(--orange-dark);">Sign in with Google</button>
+  <p style="color:var(--muted); font-size:12px; margin-top:14px;">You'll be asked to approve read, reply, and cleanup access to your Gmail.</p>
+</div>
+ 
+<div class="layout" id="dashboard" style="display:none;">
   <div class="sidebar">
     <div class="logo">📥 SwiftSift</div>
     <div class="nav-item active">Overview</div>
@@ -285,13 +294,13 @@
     <div class="nav-item">Newsletters</div>
     <div class="nav-item">Settings</div>
   </div>
-
+ 
   <div class="right">
     <div class="top-bar">
-      <h2>Overview</h2>
-      <p class="subtitle">Ask Sift to check your inbox below — nothing sends or deletes without you saying so.</p>
+      <h2>SwiftSift</h2>
+      <p class="subtitle" id="connectionStatus">Connected to Gmail — nothing sends or deletes without you saying so.</p>
     </div>
-
+ 
     <div class="stats">
       <div class="stat-card">
         <div class="stat-label">Total Emails</div>
@@ -310,7 +319,7 @@
         <div class="stat-value" id="statFyi">—</div>
       </div>
     </div>
-
+ 
     <div class="chat-panel">
       <div class="messages" id="messages">
         <div class="msg-row bot">
@@ -330,8 +339,32 @@
     </div>
   </div>
 </div>
-
+ 
 <script>
+  // ===== GOOGLE SIGN-IN SETUP =====
+  // Replace this with your real Client ID from Google Cloud Console
+  const CLIENT_ID = "YOUR_CLIENT_ID_HERE.apps.googleusercontent.com";
+  const SCOPES = "https://www.googleapis.com/auth/gmail.readonly https://www.googleapis.com/auth/gmail.modify https://www.googleapis.com/auth/gmail.send";
+ 
+  let accessToken = null;
+ 
+  function signInWithGoogle() {
+    const tokenClient = google.accounts.oauth2.initTokenClient({
+      client_id: CLIENT_ID,
+      scope: SCOPES,
+      callback: (response) => {
+        if (response.access_token) {
+          accessToken = response.access_token;
+          document.getElementById('loginScreen').style.display = 'none';
+          document.getElementById('dashboard').style.display = 'flex';
+          addMessage('bot', "You're connected! Ask me to check your inbox whenever you're ready.");
+        }
+      },
+    });
+    tokenClient.requestAccessToken();
+  }
+  // ===== END GOOGLE SIGN-IN SETUP =====
+ 
   const MOCK_EMAILS = [
     { sender: "Priya Shah", subject: "Q3 budget review — need your notes", snippet: "Can you send your section before Thursday's call?", category: "reply" },
     { sender: "GitHub", subject: "Security alert on your repo", snippet: "A dependency has a known vulnerability.", category: "reply" },
@@ -340,7 +373,7 @@
     { sender: "Substack Digest", subject: "This week's top 5 reads", snippet: "Curated picks from writers you follow.", category: "fyi" },
     { sender: "Team Calendar", subject: "Weekly sync notes", snippet: "Here's a recap of what we covered.", category: "fyi" }
   ];
-
+ 
   function addMessage(role, html) {
     const messages = document.getElementById('messages');
     const row = document.createElement('div');
@@ -354,7 +387,7 @@
     messages.scrollTop = messages.scrollHeight;
     return row;
   }
-
+ 
   function showTyping() {
     const messages = document.getElementById('messages');
     const row = document.createElement('div');
@@ -364,17 +397,17 @@
     messages.appendChild(row);
     messages.scrollTop = messages.scrollHeight;
   }
-
+ 
   function hideTyping() {
     const row = document.getElementById('typingRow');
     if (row) row.remove();
   }
-
+ 
   function sendQuick(text) {
     document.getElementById('chatInput').value = text;
     sendMessage();
   }
-
+ 
   function animateCount(el, target) {
     let current = 0;
     const step = Math.max(1, Math.ceil(target / 20));
@@ -384,14 +417,14 @@
       el.textContent = current;
     }, 25);
   }
-
+ 
   function updateStats(total, reply, junk, fyi) {
     animateCount(document.getElementById('statTotal'), total);
     animateCount(document.getElementById('statReply'), reply);
     animateCount(document.getElementById('statJunk'), junk);
     animateCount(document.getElementById('statFyi'), fyi);
   }
-
+ 
   function playChime() {
     try {
       const ctx = new (window.AudioContext || window.webkitAudioContext)();
@@ -412,7 +445,7 @@
       });
     } catch (e) { /* audio not available, fail silently */ }
   }
-
+ 
   function fireConfetti() {
     const canvas = document.getElementById('confettiCanvas');
     canvas.width = window.innerWidth;
@@ -459,25 +492,25 @@
     }
     animate();
   }
-
+ 
   function celebrateCleanup() {
     fireConfetti();
     playChime();
   }
-
+ 
   function badgeLabel(cat) {
     if (cat === 'reply') return '<span class="badge reply">Needs Reply</span>';
     if (cat === 'junk') return '<span class="badge junk">Junk</span>';
     return '<span class="badge fyi">FYI</span>';
   }
-
+ 
   function renderInboxResults() {
     const replyCount = MOCK_EMAILS.filter(e => e.category === 'reply').length;
     const junkCount = MOCK_EMAILS.filter(e => e.category === 'junk').length;
     const fyiCount = MOCK_EMAILS.filter(e => e.category === 'fyi').length;
-
+ 
     updateStats(MOCK_EMAILS.length, replyCount, junkCount, fyiCount);
-
+ 
     let cardsHtml = '<div class="summary-line">Here\'s what I found — ' + replyCount + ' need a reply, ' + junkCount + ' look like junk, ' + fyiCount + ' are just FYI:</div>';
     MOCK_EMAILS.forEach(e => {
       cardsHtml += '<div class="email-card">' +
@@ -490,20 +523,20 @@
       '<div class="quick-btn" onclick="sendQuick(\'Draft replies for the ones that need it\')">Draft replies</div>' +
       '<div class="quick-btn" onclick="sendQuick(\'Clean up the junk\')">Clean up junk</div>' +
       '</div>';
-
+ 
     addMessage('bot', cardsHtml);
   }
-
+ 
   async function sendMessage() {
     const input = document.getElementById('chatInput');
     const text = input.value.trim();
     if (!text) return;
     addMessage('user', text);
     input.value = '';
-
-    showTyping();
-
  
+    showTyping();
+ 
+    
     setTimeout(() => {
       hideTyping();
       const lower = text.toLowerCase();
@@ -522,6 +555,6 @@
     }, 900);
   }
 </script>
-
+ 
 </body>
 </html>
