@@ -6,9 +6,8 @@
 <title>SwiftSift</title>
 <link rel="icon" href="favicon.ico" sizes="any">
 <link rel="icon" href="/favicon-32x32.png" type="image/png">
-<link rel="icon" href="/favicon-32x32.png" type="image/png" sizes="192x192">
+<link rel="icon" href="/favicon-192x192.png" type="image/png" sizes="192x192">
 <link rel="apple-touch-icon" href="/apple-touch-icon.png">
-<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ccircle cx='50' cy='50' r='50' fill='%23f2891e'/%3E%3Ctext x='50' y='68' font-size='55' text-anchor='middle'%3E%F0%9F%8C%BE%3C/text%3E%3C/svg%3E">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Baloo+2:wght@500;700;800&family=Nunito+Sans:wght@400;600;700&display=swap" rel="stylesheet">
 <style>
@@ -34,7 +33,6 @@
   }
   .layout { display: flex; height: 100vh; }
 
-  
   .sidebar {
     width: 210px;
     background: linear-gradient(160deg, var(--orange) 0%, var(--orange-dark) 100%);
@@ -92,7 +90,6 @@
     margin: 0;
   }
 
- 
   .stats {
     display: grid;
     grid-template-columns: repeat(4, 1fr);
@@ -120,7 +117,6 @@
   .stat-card.junk .stat-value { color: var(--junk); }
   .stat-card.fyi .stat-value { color: var(--fyi); }
 
-  
   .chat-panel {
     flex: 1;
     background: var(--card);
@@ -162,11 +158,11 @@
     height: 6px;
     border-radius: 50%;
     background: var(--muted);
-    animation: bounce 1.1s infinite ease-in-out;
+    animation: typingBounce 1.1s infinite ease-in-out;
   }
   .typing-dots span:nth-child(2) { animation-delay: 0.15s; }
   .typing-dots span:nth-child(3) { animation-delay: 0.3s; }
-  @keyframes bounce {
+  @keyframes typingBounce {
     0%, 60%, 100% { transform: translateY(0); opacity: 0.5; }
     30% { transform: translateY(-4px); opacity: 1; }
   }
@@ -274,30 +270,28 @@
     box-shadow: 0 3px 0 var(--orange-dark);
   }
   #sendBtn:active { transform: translateY(2px); box-shadow: 0 1px 0 var(--orange-dark); }
+
+  @keyframes bounce {
+    0%, 100% { transform: translateY(0); }
+    50% { transform: translateY(-10px); }
+  }
+  .bounce-logo {
+    animation: bounce 2s ease-in-out infinite;
+  }
 </style>
 </head>
 <body>
-  <style>
-@keyframes bounce {
-  0%, 100% { transform: translateY(0); }
-  50% { transform: translateY(-10px); }
-}
 
-.bounce-logo {
-  animation: bounce 2s ease-in-out infinite;
-}
-</style>
   <div id="loginScreen" style="height:100vh; display:flex; flex-direction:column; align-items:center; justify-content:center; text-align:center; padding:20px;">
-<div class="bounce-logo" style="font-family:'Baloo 2', sans-serif; font-size:40px; font-weight:800; color:var(--orange); margin-bottom:8px;">  📥 SwiftSift</div>
-  <p style="color:var(--muted); font-size:15px; max-width:360px; margin-bottom:28px;">Sort your inbox, draft replies, and clean up junk — nothing sends or deletes without your confirmation.</p>
-  <button id="googleSignInBtn" onclick="signInWithGoogle()" style="background:var(--orange); color:#fff; border:none; border-radius:999px; padding:12px 28px; font-size:15px; font-weight:700; cursor:pointer; box-shadow:0 3px 0 var(--orange-dark);">Sign in with Google</button>
-  <p style="color:var(--muted); font-size:12px; margin-top:14px;">You'll be asked to approve read, reply, and cleanup access to your Gmail.</p>
-</div>
-  </p>
-  
+    <div class="bounce-logo" style="font-family:'Baloo 2', sans-serif; font-size:40px; font-weight:800; color:var(--orange); margin-bottom:8px;">  📥 SwiftSift</div>
+    <p style="color:var(--muted); font-size:15px; max-width:360px; margin-bottom:28px;">Sort your inbox, draft replies, and clean up junk — nothing sends or deletes without your confirmation.</p>
+    <button id="googleSignInBtn" onclick="signInWithGoogle()" style="background:var(--orange); color:#fff; border:none; border-radius:999px; padding:12px 28px; font-size:15px; font-weight:700; cursor:pointer; box-shadow:0 3px 0 var(--orange-dark);">Sign in with Google</button>
+    <p style="color:var(--muted); font-size:12px; margin-top:14px;">You'll be asked to approve read, reply, and cleanup access to your Gmail.</p>
+  </div>
+
 <canvas id="confettiCanvas" style="position:fixed; top:0; left:0; width:100%; height:100%; pointer-events:none; z-index:999;"></canvas>
 
-<div class="layout">
+<div class="layout" id="dashboard" style="display:none;">
   <div class="sidebar">
     <div class="logo">📥 SwiftSift</div>
     <div class="nav-item active">Overview</div>
@@ -353,28 +347,26 @@
 </div>
 
 <script>
-  const CLIENT_ID="1019155607119-am2tsldmp30o9pkvgcggd0s87t8v0g64.apps.googleusercontent.com";
-  const SCOPES  ="https://www.googleapis.com/auth/gmail.readonly https://www.googleapis.com/auth/gmail.modify https://www.googleapis.com/auth/gmail.send";
-  let accessToken=null;
+  const CLIENT_ID = "1019155607119-am2tsldmp30o9pkvgcggd0s87t8v0g64.apps.googleusercontent.com";
+  const SCOPES = "https://www.googleapis.com/auth/gmail.readonly https://www.googleapis.com/auth/gmail.modify https://www.googleapis.com/auth/gmail.send";
+  let accessToken = null;
+
   function signInWithGoogle(){
-    const tokenClient=google.accounts.oauth2.innitTokenClient({
-      client_id:CLIENT_ID,
-      scope:SCOPES,
-      callback:(response) =>{
-        if(response.access_token){
-          accessToken=response.access_token;
-          document.getElementById('loginScreen').style.display='none';
-          document.getElementById('dashboard').style.display='flex';
-          addMessage('bot',"You're connected! Ask me to check your inbox whenever you're ready");
+    const tokenClient = google.accounts.oauth2.initTokenClient({
+      client_id: CLIENT_ID,
+      scope: SCOPES,
+      callback: (response) => {
+        if (response.access_token) {
+          accessToken = response.access_token;
+          document.getElementById('loginScreen').style.display = 'none';
+          document.getElementById('dashboard').style.display = 'flex';
+          addMessage('bot', "You're connected! Ask me to check your inbox whenever you're ready");
         }
       },
-        
-      
-      
     });
     tokenClient.requestAccessToken();
-
   }
+
   const MOCK_EMAILS = [
     { sender: "Priya Shah", subject: "Q3 budget review — need your notes", snippet: "Can you send your section before Thursday's call?", category: "reply" },
     { sender: "GitHub", subject: "Security alert on your repo", snippet: "A dependency has a known vulnerability.", category: "reply" },
@@ -438,7 +430,7 @@
   function playChime() {
     try {
       const ctx = new (window.AudioContext || window.webkitAudioContext)();
-      const notes = [523.25, 659.25, 783.99]; // C5, E5, G5 — bright little chime
+      const notes = [523.25, 659.25, 783.99];
       notes.forEach((freq, i) => {
         const osc = ctx.createOscillator();
         const gain = ctx.createGain();
@@ -546,7 +538,6 @@
 
     showTyping();
 
- 
     setTimeout(() => {
       hideTyping();
       const lower = text.toLowerCase();
