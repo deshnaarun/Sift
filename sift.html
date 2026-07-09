@@ -34,7 +34,7 @@
   }
   .layout { display: flex; height: 100vh; }
  
-  /* Sidebar */
+
   .sidebar {
     width: 210px;
     background: linear-gradient(160deg, var(--orange) 0%, var(--orange-dark) 100%);
@@ -70,7 +70,7 @@
   }
   .nav-item:hover:not(.active) { color: #fff; padding-left: 26px; }
  
-  /* Right side: stats + chat stacked */
+  
   .right {
     flex: 1;
     display: flex;
@@ -93,7 +93,7 @@
     margin: 0;
   }
  
-  /* Stat cards */
+ 
   .stats {
     display: grid;
     grid-template-columns: repeat(4, 1fr);
@@ -121,7 +121,7 @@
   .stat-card.junk .stat-value { color: var(--junk); }
   .stat-card.fyi .stat-value { color: var(--fyi); }
  
-  /* Chat panel */
+
   .chat-panel {
     flex: 1;
     background: var(--card);
@@ -276,10 +276,18 @@
   }
   #sendBtn:active { transform: translateY(2px); box-shadow: 0 1px 0 var(--orange-dark); }
 </style>
+  @keyframes bounce {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-10px); }
+}
+
+.bounce-logo {
+  animation: bounce 2s ease-in-out infinite;
+}
 </head>
 <body>
   <div id="loginScreen" style="height:100vh; display:flex; flex-direction:column; align-items:center; justify-content:center; text-align:center; padding:20px;">
-  <div style="font-family:'Baloo 2', sans-serif; font-size:40px; font-weight:800; color:var(--orange); margin-bottom:8px;">📥 SwiftSift</div>
+<div class="bounce-logo" style="font-family:'Baloo 2', sans-serif; font-size:40px; font-weight:800; color:var(--orange); margin-bottom:8px;">  📥 SwiftSift</div>
   <p style="color:var(--muted); font-size:15px; max-width:360px; margin-bottom:28px;">Sort your inbox, draft replies, and clean up junk — nothing sends or deletes without your confirmation.</p>
   <button id="googleSignInBtn" onclick="signInWithGoogle()" style="background:var(--orange); color:#fff; border:none; border-radius:999px; padding:12px 28px; font-size:15px; font-weight:700; cursor:pointer; box-shadow:0 3px 0 var(--orange-dark);">Sign in with Google</button>
   <p style="color:var(--muted); font-size:12px; margin-top:14px;">You'll be asked to approve read, reply, and cleanup access to your Gmail.</p>
