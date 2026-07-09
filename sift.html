@@ -287,10 +287,17 @@
   animation: bounce 2s ease-in-out infinite;
 }
 </style>
- 
+  <div id="loginScreen" style="height:100vh; display:flex; flex-direction:column; align-items:center; justify-content:center; text-align:center; padding:20px;">
+<div class="bounce-logo" style="font-family:'Baloo 2', sans-serif; font-size:40px; font-weight:800; color:var(--orange); margin-bottom:8px;">  📥 SwiftSift</div>
+  <p style="color:var(--muted); font-size:15px; max-width:360px; margin-bottom:28px;">Sort your inbox, draft replies, and clean up junk — nothing sends or deletes without your confirmation.</p>
+  <button id="googleSignInBtn" onclick="signInWithGoogle()" style="background:var(--orange); color:#fff; border:none; border-radius:999px; padding:12px 28px; font-size:15px; font-weight:700; cursor:pointer; box-shadow:0 3px 0 var(--orange-dark);">Sign in with Google</button>
+  <p style="color:var(--muted); font-size:12px; margin-top:14px;">You'll be asked to approve read, reply, and cleanup access to your Gmail.</p>
+</div>
+  </p>
+  
 <canvas id="confettiCanvas" style="position:fixed; top:0; left:0; width:100%; height:100%; pointer-events:none; z-index:999;"></canvas>
- 
-<div class="layout" id="dashboard" style="display:none;">
+
+<div class="layout">
   <div class="sidebar">
     <div class="logo">📥 SwiftSift</div>
     <div class="nav-item active">Overview</div>
@@ -299,13 +306,13 @@
     <div class="nav-item">Newsletters</div>
     <div class="nav-item">Settings</div>
   </div>
- 
+
   <div class="right">
     <div class="top-bar">
-      <h2>SwiftSift</h2>
-      <p class="subtitle" id="connectionStatus">Connected to Gmail — nothing sends or deletes without you saying so.</p>
+      <h2>Overview</h2>
+      <p class="subtitle">Ask Sift to check your inbox below — nothing sends or deletes without you saying so.</p>
     </div>
- 
+
     <div class="stats">
       <div class="stat-card">
         <div class="stat-label">Total Emails</div>
@@ -324,7 +331,7 @@
         <div class="stat-value" id="statFyi">—</div>
       </div>
     </div>
- 
+
     <div class="chat-panel">
       <div class="messages" id="messages">
         <div class="msg-row bot">
@@ -344,31 +351,30 @@
     </div>
   </div>
 </div>
- 
+
 <script>
-  
-  const CLIENT_ID = "1019155607119-am2tsldmp30o9pkvgcggd0s87t8v0g64.apps.googleusercontent.com";
-  const SCOPES = "https://www.googleapis.com/auth/gmail.readonly https://www.googleapis.com/auth/gmail.modify https://www.googleapis.com/auth/gmail.send";
- 
-  let accessToken = null;
- 
-  function signInWithGoogle() {
-    const tokenClient = google.accounts.oauth2.initTokenClient({
-      client_id: CLIENT_ID,
-      scope: SCOPES,
-      callback: (response) => {
-        if (response.access_token) {
-          accessToken = response.access_token;
-          document.getElementById('loginScreen').style.display = 'none';
-          document.getElementById('dashboard').style.display = 'flex';
-          addMessage('bot', "You're connected! Ask me to check your inbox whenever you're ready.");
+  const CLIENT_ID="1019155607119-am2tsldmp30o9pkvgcggd0s87t8v0g64.apps.googleusercontent.com";
+  const SCOPES  ="https://www.googleapis.com/auth/gmail.readonly https://www.googleapis.com/auth/gmail.modify https://www.googleapis.com/auth/gmail.send";
+  let accessToken=null;
+  function signInWithGoogle(){
+    const tokenClient=google.accounts.oauth2.innitTokenClient({
+      client_id:CLIENT_ID,
+      scope:SCOPES,
+      callback:(response) =>{
+        if(response.access_token){
+          accessToken=response.access_token;
+          document.getElementById('loginScreen').style.display='none';
+          document.getElementById('dashboard').style.display='flex';
+          addMessage('bot',"You're connected! Ask me to check your inbox whenever you're ready");
         }
       },
+        
+      
+      
     });
     tokenClient.requestAccessToken();
+
   }
-  
- 
   const MOCK_EMAILS = [
     { sender: "Priya Shah", subject: "Q3 budget review — need your notes", snippet: "Can you send your section before Thursday's call?", category: "reply" },
     { sender: "GitHub", subject: "Security alert on your repo", snippet: "A dependency has a known vulnerability.", category: "reply" },
@@ -377,7 +383,7 @@
     { sender: "Substack Digest", subject: "This week's top 5 reads", snippet: "Curated picks from writers you follow.", category: "fyi" },
     { sender: "Team Calendar", subject: "Weekly sync notes", snippet: "Here's a recap of what we covered.", category: "fyi" }
   ];
- 
+
   function addMessage(role, html) {
     const messages = document.getElementById('messages');
     const row = document.createElement('div');
@@ -391,7 +397,7 @@
     messages.scrollTop = messages.scrollHeight;
     return row;
   }
- 
+
   function showTyping() {
     const messages = document.getElementById('messages');
     const row = document.createElement('div');
@@ -401,17 +407,17 @@
     messages.appendChild(row);
     messages.scrollTop = messages.scrollHeight;
   }
- 
+
   function hideTyping() {
     const row = document.getElementById('typingRow');
     if (row) row.remove();
   }
- 
+
   function sendQuick(text) {
     document.getElementById('chatInput').value = text;
     sendMessage();
   }
- 
+
   function animateCount(el, target) {
     let current = 0;
     const step = Math.max(1, Math.ceil(target / 20));
@@ -421,14 +427,14 @@
       el.textContent = current;
     }, 25);
   }
- 
+
   function updateStats(total, reply, junk, fyi) {
     animateCount(document.getElementById('statTotal'), total);
     animateCount(document.getElementById('statReply'), reply);
     animateCount(document.getElementById('statJunk'), junk);
     animateCount(document.getElementById('statFyi'), fyi);
   }
- 
+
   function playChime() {
     try {
       const ctx = new (window.AudioContext || window.webkitAudioContext)();
@@ -449,7 +455,7 @@
       });
     } catch (e) { /* audio not available, fail silently */ }
   }
- 
+
   function fireConfetti() {
     const canvas = document.getElementById('confettiCanvas');
     canvas.width = window.innerWidth;
@@ -496,25 +502,25 @@
     }
     animate();
   }
- 
+
   function celebrateCleanup() {
     fireConfetti();
     playChime();
   }
- 
+
   function badgeLabel(cat) {
     if (cat === 'reply') return '<span class="badge reply">Needs Reply</span>';
     if (cat === 'junk') return '<span class="badge junk">Junk</span>';
     return '<span class="badge fyi">FYI</span>';
   }
- 
+
   function renderInboxResults() {
     const replyCount = MOCK_EMAILS.filter(e => e.category === 'reply').length;
     const junkCount = MOCK_EMAILS.filter(e => e.category === 'junk').length;
     const fyiCount = MOCK_EMAILS.filter(e => e.category === 'fyi').length;
- 
+
     updateStats(MOCK_EMAILS.length, replyCount, junkCount, fyiCount);
- 
+
     let cardsHtml = '<div class="summary-line">Here\'s what I found — ' + replyCount + ' need a reply, ' + junkCount + ' look like junk, ' + fyiCount + ' are just FYI:</div>';
     MOCK_EMAILS.forEach(e => {
       cardsHtml += '<div class="email-card">' +
@@ -527,20 +533,20 @@
       '<div class="quick-btn" onclick="sendQuick(\'Draft replies for the ones that need it\')">Draft replies</div>' +
       '<div class="quick-btn" onclick="sendQuick(\'Clean up the junk\')">Clean up junk</div>' +
       '</div>';
- 
+
     addMessage('bot', cardsHtml);
   }
- 
+
   async function sendMessage() {
     const input = document.getElementById('chatInput');
     const text = input.value.trim();
     if (!text) return;
     addMessage('user', text);
     input.value = '';
- 
+
     showTyping();
+
  
-    
     setTimeout(() => {
       hideTyping();
       const lower = text.toLowerCase();
@@ -559,6 +565,6 @@
     }, 900);
   }
 </script>
- 
+
 </body>
 </html>
