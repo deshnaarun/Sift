@@ -428,11 +428,45 @@
           document.getElementById('dashboard').style.display = 'flex';
           addMessage('bot', "You're connected! Ask me to check your inbox whenever you're ready");
           listMessages();
+          loadConnectedAccount();
         }
       },
     });
     tokenClient.requestAccessToken();
   }
+   async function loadConnectedAccount() {
+    const el = document.getElementById('connectedAccount');
+    try {
+      const response = await fetch('https://www.googleapis.com/oauth2/v3/userinfo', {
+        headers: { Authorization: `Bearer ${accessToken}` }
+      });
+      const data = await response.json();
+      el.textContent = data.email || 'Unknown account';
+    } catch (e) {
+      el.textContent = 'Unable to load account info';
+    }
+  }
+ 
+  function signOut() {
+    const token = accessToken;
+    accessToken = null;
+    window.REAL_EMAILS = undefined;
+    window.INBOX_ERROR = false;
+    document.getElementById('connectedAccount').textContent = '—';
+    document.getElementById('messages').innerHTML =
+      '<div class="msg-row bot"><div class="avatar">🌾</div><div class="bubble">' +
+      "Hey! I'm SwiftSift. Ask me to check your inbox and I'll sort what needs a reply, what's junk, and what's just FYI." +
+      '<div class="quick-actions"><div class="quick-btn" onclick="sendQuick(\'Check my inbox\')">Check my inbox</div></div>' +
+      '</div></div>';
+    document.getElementById('listPanelContent').innerHTML = '';
+    document.getElementById('dashboard').style.display = 'none';
+    document.getElementById('loginScreen').style.display = 'flex';
+    switchTab('overview');
+    if (token && google.accounts.oauth2.revoke) {
+      google.accounts.oauth2.revoke(token, () => {});
+    }
+  }
+ 
  
   function getEmailLimit() {
     const stored = parseInt(localStorage.getItem('siftEmailLimit'), 10);
