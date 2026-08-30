@@ -33,7 +33,7 @@
     font-family: 'Nunito Sans', sans-serif;
   }
   .layout { display: flex; height: 100vh; }
-
+ 
   .sidebar {
     width: 210px;
     background: linear-gradient(160deg, var(--orange) 0%, var(--orange-dark) 100%);
@@ -68,7 +68,7 @@
     border-radius: 0 20px 20px 0;
   }
   .nav-item:hover:not(.active) { color: #fff; padding-left: 26px; }
-
+ 
   .right {
     flex: 1;
     display: flex;
@@ -90,7 +90,7 @@
     font-size: 13px;
     margin: 0;
   }
-
+ 
   .stats {
     display: grid;
     grid-template-columns: repeat(4, 1fr);
@@ -117,7 +117,7 @@
   .stat-card.reply .stat-value { color: var(--reply); }
   .stat-card.junk .stat-value { color: var(--junk); }
   .stat-card.fyi .stat-value { color: var(--fyi); }
-
+ 
   .chat-panel {
     flex: 1;
     background: var(--card);
@@ -143,12 +143,12 @@
     animation: fadeInUp 0.28s ease both;
   }
   .msg-row.user { justify-content: flex-end; }
-
+ 
   @keyframes fadeInUp {
     from { opacity: 0; transform: translateY(8px); }
     to { opacity: 1; transform: translateY(0); }
   }
-
+ 
   .typing-dots {
     display: flex;
     gap: 4px;
@@ -192,7 +192,7 @@
     color: #fff;
     border-color: var(--orange);
   }
-
+ 
   .email-card {
     background: #fff;
     border: 1px solid var(--border);
@@ -215,7 +215,7 @@
   .email-sender { font-weight: 700; font-size: 13px; }
   .email-subject { font-size: 13px; margin-bottom: 3px; }
   .email-snippet { font-size: 12px; color: var(--muted); }
-
+ 
   .badge {
     display: inline-block;
     padding: 2px 9px;
@@ -226,7 +226,7 @@
   .badge.reply { background: #dbe8ff; color: var(--reply); }
   .badge.junk { background: #fbdedb; color: var(--junk); }
   .badge.fyi { background: #d7f2e3; color: var(--fyi); }
-
+ 
   .quick-actions { display: flex; gap: 8px; margin-top: 10px; flex-wrap: wrap; }
   .quick-btn {
     background: #fff;
@@ -241,7 +241,7 @@
   }
   .quick-btn:hover { border-color: var(--orange); color: var(--orange); transform: translateY(-1px); }
   .quick-btn:active { transform: translateY(0); }
-
+ 
   .input-bar {
     flex-shrink: 0;
     border-top: 2px solid var(--border);
@@ -271,7 +271,7 @@
     box-shadow: 0 3px 0 var(--orange-dark);
   }
   #sendBtn:active { transform: translateY(2px); box-shadow: 0 1px 0 var(--orange-dark); }
-
+ 
   @keyframes bounce {
     0%, 100% { transform: translateY(0); }
     50% { transform: translateY(-10px); }
@@ -279,20 +279,69 @@
   .bounce-logo {
     animation: bounce 2s ease-in-out infinite;
   }
-  
+ 
+  .list-panel {
+    flex: 1;
+    background: var(--card);
+    border: 2px solid var(--border);
+    border-radius: 18px;
+    padding: 18px 20px;
+    overflow-y: auto;
+    min-height: 0;
+    display: none;
+    flex-direction: column;
+    gap: 8px;
+  }
+  .list-panel-header {
+    display: flex;
+    justify-content: flex-end;
+    margin-bottom: 4px;
+  }
+  .empty-state {
+    color: var(--muted);
+    font-size: 14px;
+    text-align: center;
+    padding: 60px 20px;
+  }
+ 
+  .settings-panel {
+    display: none;
+    flex-direction: column;
+    gap: 16px;
+    background: var(--card);
+    border: 2px solid var(--border);
+    border-radius: 18px;
+    padding: 22px;
+  }
+  .settings-field label {
+    font-weight: 700;
+    font-size: 13px;
+    display: block;
+    margin-bottom: 6px;
+  }
+  .settings-field input {
+    border: 2px solid var(--border);
+    border-radius: 10px;
+    padding: 8px 12px;
+    font-size: 14px;
+    width: 120px;
+    font-family: inherit;
+  }
+  .settings-field input:focus { border-color: var(--orange); outline: none; }
+  #settingsStatus { font-size: 13px; color: var(--fyi); min-height: 16px; }
 </style>
 </head>
 <body>
-
+ 
   <div id="loginScreen" style="height:100vh; display:flex; flex-direction:column; align-items:center; justify-content:center; text-align:center; padding:20px;">
     <div class="bounce-logo" style="font-family:'Baloo 2', sans-serif; font-size:40px; font-weight:800; color:var(--orange); margin-bottom:8px;">  📥 SwiftSift</div>
     <p style="color:var(--muted); font-size:15px; max-width:360px; margin-bottom:28px;">Sort your inbox, draft replies, and clean up junk — nothing sends or deletes without your confirmation.</p>
     <button id="googleSignInBtn" onclick="signInWithGoogle()" style="background:var(--orange); color:#fff; border:none; border-radius:999px; padding:12px 28px; font-size:15px; font-weight:700; cursor:pointer; box-shadow:0 3px 0 var(--orange-dark);">Sign in with Google</button>
     <p style="color:var(--muted); font-size:12px; margin-top:14px;">You'll be asked to approve read, reply, and cleanup access to your Gmail.</p>
   </div>
-
+ 
 <canvas id="confettiCanvas" style="position:fixed; top:0; left:0; width:100%; height:100%; pointer-events:none; z-index:999;"></canvas>
-
+ 
 <div class="layout" id="dashboard" style="display:none;">
   <div class="sidebar">
     <div class="logo">📥 SwiftSift</div>
@@ -302,13 +351,13 @@
     <div class="nav-item" data-tab="fyi" onclick="switchTab('fyi')">Newsletters</div>
     <div class="nav-item" data-tab="settings" onclick="switchTab('settings')">Settings</div>
   </div>
-
+ 
   <div class="right">
     <div class="top-bar">
       <h2>Overview</h2>
       <p class="subtitle">Ask Sift to check your inbox below — nothing sends or deletes without you saying so.</p>
     </div>
-
+ 
     <div class="stats">
       <div class="stat-card">
         <div class="stat-label">Total Emails</div>
@@ -327,8 +376,8 @@
         <div class="stat-value" id="statFyi">—</div>
       </div>
     </div>
-
-    <div class="list-panel">
+ 
+    <div class="chat-panel" id="chatPanel">
       <div class="messages" id="messages">
         <div class="msg-row bot">
           <div class="avatar">🌾</div>
@@ -345,30 +394,29 @@
         <button id="sendBtn" onclick="sendMessage()">Send</button>
       </div>
     </div>
-  </div>
-</div>
-
-<div class="list-panel" id="listPanel">
-  <div class="list-panel-header">
-    <div class="quick-btn"onclick="refreshInbox()">🔄 Refresh</div>
+ 
+    <div class="list-panel" id="listPanel">
+      <div class="list-panel-header">
+        <div class="quick-btn" onclick="refreshInbox()">🔄 Refresh</div>
       </div>
-  </div>
-  <div id="listPanelContent"></div>
+      <div id="listPanelContent"></div>
     </div>
- <div class="settings-panel" id="settingsPanel">
+ 
+    <div class="settings-panel" id="settingsPanel">
       <div class="settings-field">
         <label for="emailLimitInput">Emails to pull from inbox each check</label>
         <input id="emailLimitInput" type="number" min="5" max="100" onchange="saveEmailLimit()">
       </div>
       <div id="settingsStatus"></div>
     </div>
+  </div>
 </div>
-
+ 
 <script>
   const CLIENT_ID = "1019155607119-am2tsldmp30o9pkvgcggd0s87t8v0g64.apps.googleusercontent.com";
   const SCOPES = "https://www.googleapis.com/auth/gmail.readonly https://www.googleapis.com/auth/gmail.modify https://www.googleapis.com/auth/gmail.send";
   let accessToken = null;
-
+ 
   function signInWithGoogle(){
     const tokenClient = google.accounts.oauth2.initTokenClient({
       client_id: CLIENT_ID,
@@ -385,66 +433,69 @@
     });
     tokenClient.requestAccessToken();
   }
-   function getEmailLimit() {
+ 
+  function getEmailLimit() {
     const stored = parseInt(localStorage.getItem('siftEmailLimit'), 10);
     return (!isNaN(stored) && stored >= 5 && stored <= 100) ? stored : 25;
   }
-
-     async function listMessages() {
-     const limit = getEmailLimit();
-    const response = await fetch(`https://gmail.googleapis.com/gmail/v1/users/me/messages?maxResults=${limit}&labelIds=INBOX`, {
-         headers: {
-          Authorization: 'Bearer ${accessToken}'
-         }
-       });
-
-       const data= await response.json();
-       if(!data.messages){
-        console.log("No messages found or error",data);
-        return;
-       }
-       const emails=[];
-       for(const msg of data.messages){
-        const details= await getMessageDetails(msg.id);
-        const scategory=categorizeEmail(details.subject,details.snippet);
-        emails.push({...details,category});
-       }
-       
-       console.log(emails);
-      window.REAL_EMAILS = emails
-      
-     }
-
-    async function getMessageDetails(messageId){
-    const response = await fetch(`https://gmail.googleapis.com/gmail/v1/users/me/messages/${messageId}?format=metadata&metadataHeaders=From&metadataHeaders=Subject`, {
-    headers: {
-          Authorization: 'Bearer ${accessToken}'
+ 
+  async function listMessages() {
+    const limit = getEmailLimit();
+    window.INBOX_ERROR = false;
+    try {
+      const response = await fetch(`https://gmail.googleapis.com/gmail/v1/users/me/messages?maxResults=${limit}&labelIds=INBOX`, {
+        headers: {
+          Authorization: `Bearer ${accessToken}`
         }
       });
-        const data=await response.json();
-        const headers = data.payload.headers;
-        const from = headers.find(h => h.name === 'From')?.value || 'Unknown sender';
-        const subject = headers.find(h => h.name === 'Subject')?.value || '(no subject)';
-        const snippet = data.snippet || '';
-
-        return{sender: from,subject,snippet};
-
-     }
-
-   function categorizeEmail(subject, snippet){
-     const text=(subject + ' '+snippet).toLowerCase();
-     if(text.includes('unsubscribe') || text.includes('%off') || text.includes('winner') || text.includes('prize')){
-        return 'junk';
-     }
-
-     if(text.includes('newsletter') || text.includes('digest')|| text.includes('weekly')){
+ 
+      const data = await response.json();
+      if (!data.messages) {
+        console.log("No messages found or error:", data);
+        window.REAL_EMAILS = [];
+        return;
+      }
+ 
+      const emails = [];
+      for (const msg of data.messages) {
+        const details = await getMessageDetails(msg.id);
+        const category = categorizeEmail(details.subject, details.snippet);
+        emails.push({ ...details, category });
+      }
+ 
+      window.REAL_EMAILS = emails;
+    } catch (e) {
+      console.error('Failed to fetch inbox:', e);
+      window.INBOX_ERROR = true;
+    }
+  }
+ 
+  async function getMessageDetails(messageId) {
+    const response = await fetch(`https://gmail.googleapis.com/gmail/v1/users/me/messages/${messageId}?format=metadata&metadataHeaders=From&metadataHeaders=Subject`, {
+      headers: {
+        Authorization: `Bearer ${accessToken}`
+      }
+    });
+    const data = await response.json();
+    const headers = data.payload.headers;
+    const from = headers.find(h => h.name === 'From')?.value || 'Unknown sender';
+    const subject = headers.find(h => h.name === 'Subject')?.value || '(no subject)';
+    const snippet = data.snippet || '';
+ 
+    return { sender: from, subject, snippet };
+  }
+ 
+  function categorizeEmail(subject, snippet) {
+    const text = (subject + ' ' + snippet).toLowerCase();
+    if (text.includes('unsubscribe') || text.includes('% off') || text.includes('winner') || text.includes('prize')) {
+      return 'junk';
+    }
+    if (text.includes('newsletter') || text.includes('digest') || text.includes('weekly')) {
       return 'fyi';
-     }
-     return reply;
-   }
-        
-
-
+    }
+    return 'reply';
+  }
+ 
   function addMessage(role, html) {
     const messages = document.getElementById('messages');
     const row = document.createElement('div');
@@ -458,7 +509,7 @@
     messages.scrollTop = messages.scrollHeight;
     return row;
   }
-
+ 
   function showTyping() {
     const messages = document.getElementById('messages');
     const row = document.createElement('div');
@@ -468,17 +519,17 @@
     messages.appendChild(row);
     messages.scrollTop = messages.scrollHeight;
   }
-
+ 
   function hideTyping() {
     const row = document.getElementById('typingRow');
     if (row) row.remove();
   }
-
+ 
   function sendQuick(text) {
     document.getElementById('chatInput').value = text;
     sendMessage();
   }
-
+ 
   function animateCount(el, target) {
     let current = 0;
     const step = Math.max(1, Math.ceil(target / 20));
@@ -488,14 +539,14 @@
       el.textContent = current;
     }, 25);
   }
-
+ 
   function updateStats(total, reply, junk, fyi) {
     animateCount(document.getElementById('statTotal'), total);
     animateCount(document.getElementById('statReply'), reply);
     animateCount(document.getElementById('statJunk'), junk);
     animateCount(document.getElementById('statFyi'), fyi);
   }
-
+ 
   function playChime() {
     try {
       const ctx = new (window.AudioContext || window.webkitAudioContext)();
@@ -516,7 +567,7 @@
       });
     } catch (e) { /* audio not available, fail silently */ }
   }
-
+ 
   function fireConfetti() {
     const canvas = document.getElementById('confettiCanvas');
     canvas.width = window.innerWidth;
@@ -563,12 +614,13 @@
     }
     animate();
   }
-
+ 
   function celebrateCleanup() {
     fireConfetti();
     playChime();
   }
-const TAB_INFO = {
+ 
+  const TAB_INFO = {
     overview: { title: 'Overview', subtitle: "Ask Sift to check your inbox below — nothing sends or deletes without you saying so." },
     reply: { title: 'Needs Reply', subtitle: 'Emails that look like they need a response from you.' },
     junk: { title: 'Junk', subtitle: 'Emails that look like spam or promotions.' },
@@ -593,10 +645,18 @@ const TAB_INFO = {
   }
  
   function renderListPanel(category) {
-    const emailsToShow = (window.REAL_EMAILS || MOCK_EMAILS).filter(e => e.category === category);
     const listEl = document.getElementById('listPanelContent');
+    if (window.INBOX_ERROR) {
+      listEl.innerHTML = '<div class="empty-state">Couldn\'t load your inbox. Hit Refresh to try again.</div>';
+      return;
+    }
+    if (!window.REAL_EMAILS) {
+      listEl.innerHTML = '<div class="empty-state">Loading your inbox…</div>';
+      return;
+    }
+    const emailsToShow = window.REAL_EMAILS.filter(e => e.category === category);
     if (emailsToShow.length === 0) {
-      listEl.innerHTML = '<div class="empty-state">Nothing here yet. Ask Sift to check your inbox from Overview, or hit Refresh.</div>';
+      listEl.innerHTML = '<div class="empty-state">Nothing here — your inbox is clear for this category.</div>';
       return;
     }
     listEl.innerHTML = emailsToShow.map(e =>
@@ -630,12 +690,13 @@ const TAB_INFO = {
     const input = document.getElementById('emailLimitInput');
     if (input) input.value = getEmailLimit();
   });
+ 
   function badgeLabel(cat) {
     if (cat === 'reply') return '<span class="badge reply">Needs Reply</span>';
     if (cat === 'junk') return '<span class="badge junk">Junk</span>';
     return '<span class="badge fyi">FYI</span>';
   }
-
+ 
   function renderInboxResults() {
     if (window.INBOX_ERROR) {
       addMessage('bot', "I couldn't load your inbox just now. Try asking me to check again.");
@@ -650,13 +711,12 @@ const TAB_INFO = {
       addMessage('bot', "Your inbox looks clear — nothing to sort right now.");
       return;
     }
-
     const replyCount = emailsToShow.filter(e => e.category === 'reply').length;
     const junkCount = emailsToShow.filter(e => e.category === 'junk').length;
     const fyiCount = emailsToShow.filter(e => e.category === 'fyi').length;
-
+ 
     updateStats(emailsToShow.length, replyCount, junkCount, fyiCount);
-
+ 
     let cardsHtml = '<div class="summary-line">Here\'s what I found — ' + replyCount + ' need a reply, ' + junkCount + ' look like junk, ' + fyiCount + ' are just FYI:</div>';
     emailsToShow.forEach(e => {
       cardsHtml += '<div class="email-card">' +
@@ -669,19 +729,19 @@ const TAB_INFO = {
       '<div class="quick-btn" onclick="sendQuick(\'Draft replies for the ones that need it\')">Draft replies</div>' +
       '<div class="quick-btn" onclick="sendQuick(\'Clean up the junk\')">Clean up junk</div>' +
       '</div>';
-
+ 
     addMessage('bot', cardsHtml);
   }
-
+ 
   async function sendMessage() {
     const input = document.getElementById('chatInput');
     const text = input.value.trim();
     if (!text) return;
     addMessage('user', text);
     input.value = '';
-
+ 
     showTyping();
-
+ 
     setTimeout(() => {
       hideTyping();
       const lower = text.toLowerCase();
@@ -700,6 +760,6 @@ const TAB_INFO = {
     }, 900);
   }
 </script>
-
+ 
 </body>
 </html>
