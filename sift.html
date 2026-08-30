@@ -440,27 +440,33 @@
 
   async function listMessages() {
     const limit = getEmailLimit();
-    const response = await fetch(`https://gmail.googleapis.com/gmail/v1/users/me/messages?maxResults=${limit}&labelIds=INBOX`, {
-      headers: {
-        Authorization: `Bearer ${accessToken}`
+    window.INBOX_ERROR = false;
+    try {
+      const response = await fetch(`https://gmail.googleapis.com/gmail/v1/users/me/messages?maxResults=${limit}&labelIds=INBOX`, {
+        headers: {
+          Authorization: `Bearer ${accessToken}`
+        }
+      });
+
+      const data = await response.json();
+      if (!data.messages) {
+        console.log("No messages found or error:", data);
+        window.REAL_EMAILS = [];
+        return;
       }
-    });
 
-    const data = await response.json();
-    if (!data.messages) {
-      console.log("No messages found or error:", data);
-      return;
+      const emails = [];
+      for (const msg of data.messages) {
+        const details = await getMessageDetails(msg.id);
+        const category = categorizeEmail(details.subject, details.snippet);
+        emails.push({ ...details, category });
+      }
+
+      window.REAL_EMAILS = emails;
+    } catch (e) {
+      console.error('Failed to fetch inbox:', e);
+      window.INBOX_ERROR = true;
     }
-
-    const emails = [];
-    for (const msg of data.messages) {
-      const details = await getMessageDetails(msg.id);
-      const category = categorizeEmail(details.subject, details.snippet);
-      emails.push({ ...details, category });
-    }
-
-    console.log(emails);
-    window.REAL_EMAILS = emails;
   }
 
   async function getMessageDetails(messageId) {
@@ -488,15 +494,6 @@
     }
     return 'reply';
   }
-
-  const MOCK_EMAILS = [
-    { sender: "Priya Shah", subject: "Q3 budget review — need your notes", snippet: "Can you send your section before Thursday's call?", category: "reply" },
-    { sender: "GitHub", subject: "Security alert on your repo", snippet: "A dependency has a known vulnerability.", category: "reply" },
-    { sender: "DealBlast Deals", subject: "70% OFF everything, today only!!!", snippet: "Don't miss this one-time offer...", category: "junk" },
-    { sender: "TotallyRealPrizes", subject: "You've won a gift card", snippet: "Click here to claim your reward", category: "junk" },
-    { sender: "Substack Digest", subject: "This week's top 5 reads", snippet: "Curated picks from writers you follow.", category: "fyi" },
-    { sender: "Team Calendar", subject: "Weekly sync notes", snippet: "Here's a recap of what we covered.", category: "fyi" }
-  ];
 
   function addMessage(role, html) {
     const messages = document.getElementById('messages');
@@ -647,10 +644,18 @@
   }
 
   function renderListPanel(category) {
-    const emailsToShow = (window.REAL_EMAILS || MOCK_EMAILS).filter(e => e.category === category);
     const listEl = document.getElementById('listPanelContent');
+    if (window.INBOX_ERROR) {
+      listEl.innerHTML = '<div class="empty-state">Couldn\'t load your inbox. Hit Refresh to try again.</div>';
+      return;
+    }
+    if (!window.REAL_EMAILS) {
+      listEl.innerHTML = '<div class="empty-state">Loading your inbox…</div>';
+      return;
+    }
+    const emailsToShow = window.REAL_EMAILS.filter(e => e.category === category);
     if (emailsToShow.length === 0) {
-      listEl.innerHTML = '<div class="empty-state">Nothing here yet. Ask Sift to check your inbox from Overview, or hit Refresh.</div>';
+      listEl.innerHTML = '<div class="empty-state">Nothing here — your inbox is clear for this category.</div>';
       return;
     }
     listEl.innerHTML = emailsToShow.map(e =>
@@ -692,7 +697,19 @@
   }
 
   function renderInboxResults() {
-    const emailsToShow = window.REAL_EMAILS || MOCK_EMAILS;
+    if (window.INBOX_ERROR) {
+      addMessage('bot', "I couldn't load your inbox just now. Try asking me to check again.");
+      return;
+    }
+    if (!window.REAL_EMAILS) {
+      addMessage('bot', "Still loading your inbox — give it a second and ask again.");
+      return;
+    }
+    const emailsToShow = window.REAL_EMAILS;
+    if (emailsToShow.length === 0) {
+      addMessage('bot', "Your inbox looks clear — nothing to sort right now.");
+      return;
+    }
     const replyCount = emailsToShow.filter(e => e.category === 'reply').length;
     const junkCount = emailsToShow.filter(e => e.category === 'junk').length;
     const fyiCount = emailsToShow.filter(e => e.category === 'fyi').length;
