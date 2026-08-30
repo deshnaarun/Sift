@@ -6,8 +6,9 @@
 <title>SwiftSift</title>
 <link rel="icon" href="favicon.ico" sizes="any">
 <link rel="icon" href="/favicon-32x32.png" type="image/png">
-<link rel="icon" href="/favicon-192x192.png" type="image/png" sizes="192x192">
+<link rel="icon" href="/favicon-32x32.png" type="image/png" sizes="192x192">
 <link rel="apple-touch-icon" href="/apple-touch-icon.png">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ccircle cx='50' cy='50' r='50' fill='%23f2891e'/%3E%3Ctext x='50' y='68' font-size='55' text-anchor='middle'%3E%F0%9F%8C%BE%3C/text%3E%3C/svg%3E">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Baloo+2:wght@500;700;800&family=Nunito+Sans:wght@400;600;700&display=swap" rel="stylesheet">
 <style>
@@ -278,6 +279,7 @@
   .bounce-logo {
     animation: bounce 2s ease-in-out infinite;
   }
+  
 </style>
 </head>
 <body>
@@ -294,11 +296,11 @@
 <div class="layout" id="dashboard" style="display:none;">
   <div class="sidebar">
     <div class="logo">📥 SwiftSift</div>
-    <div class="nav-item active">Overview</div>
-    <div class="nav-item">Needs Reply</div>
-    <div class="nav-item">Junk</div>
-    <div class="nav-item">Newsletters</div>
-    <div class="nav-item">Settings</div>
+    <div class="nav-item active" data-tab="overview" onclick="switchTab('overview')">Overview</div>
+    <div class="nav-item" data-tab="reply" onclick="switchTab('reply')">Needs Reply</div>
+    <div class="nav-item" data-tab="junk" onclick="switchTab('junk')">Junk</div>
+    <div class="nav-item" data-tab="fyi" onclick="switchTab('fyi')">Newsletters</div>
+    <div class="nav-item" data-tab="settings" onclick="switchTab('settings')">Settings</div>
   </div>
 
   <div class="right">
@@ -326,7 +328,7 @@
       </div>
     </div>
 
-    <div class="chat-panel">
+    <div class="list-panel">
       <div class="messages" id="messages">
         <div class="msg-row bot">
           <div class="avatar">🌾</div>
@@ -344,6 +346,22 @@
       </div>
     </div>
   </div>
+</div>
+
+<div class="list-panel" id="listPanel">
+  <div class="list-panel-header">
+    <div class="quick-btn"onclick="refreshInbox()">🔄 Refresh</div>
+      </div>
+  </div>
+  <div id="listPanelContent"></div>
+    </div>
+ <div class="settings-panel" id="settingsPanel">
+      <div class="settings-field">
+        <label for="emailLimitInput">Emails to pull from inbox each check</label>
+        <input id="emailLimitInput" type="number" min="5" max="100" onchange="saveEmailLimit()">
+      </div>
+      <div id="settingsStatus"></div>
+    </div>
 </div>
 
 <script>
@@ -367,65 +385,65 @@
     });
     tokenClient.requestAccessToken();
   }
-
-  async function listMessages() {
-    const response = await fetch("https://gmail.googleapis.com/gmail/v1/users/me/messages", {
-      headers: {
-        Authorization: `Bearer ${accessToken}`
-      }
-    });
-
-    const data = await response.json();
-    if (!data.messages) {
-      console.log("No messages found or error:", data);
-      return;
-    }
-
-    const emails = [];
-    for (const msg of data.messages) {
-      const details = await getMessageDetails(msg.id);
-      const category = categorizeEmail(details.subject, details.snippet);
-      emails.push({ ...details, category });
-    }
-
-    console.log(emails);
-    window.REAL_EMAILS = emails;
+   function getEmailLimit() {
+    const stored = parseInt(localStorage.getItem('siftEmailLimit'), 10);
+    return (!isNaN(stored) && stored >= 5 && stored <= 100) ? stored : 25;
   }
 
-  async function getMessageDetails(messageId) {
+     async function listMessages() {
+     const limit = getEmailLimit();
+    const response = await fetch(`https://gmail.googleapis.com/gmail/v1/users/me/messages?maxResults=${limit}&labelIds=INBOX`, {
+         headers: {
+          Authorization: 'Bearer ${accessToken}'
+         }
+       });
+
+       const data= await response.json();
+       if(!data.messages){
+        console.log("No messages found or error",data);
+        return;
+       }
+       const emails=[];
+       for(const msg of data.messages){
+        const details= await getMessageDetails(msg.id);
+        const scategory=categorizeEmail(details.subject,details.snippet);
+        emails.push({...details,category});
+       }
+       
+       console.log(emails);
+      window.REAL_EMAILS = emails
+      
+     }
+
+    async function getMessageDetails(messageId){
     const response = await fetch(`https://gmail.googleapis.com/gmail/v1/users/me/messages/${messageId}?format=metadata&metadataHeaders=From&metadataHeaders=Subject`, {
-      headers: {
-        Authorization: `Bearer ${accessToken}`
-      }
-    });
-    const data = await response.json();
-    const headers = data.payload.headers;
-    const from = headers.find(h => h.name === 'From')?.value || 'Unknown sender';
-    const subject = headers.find(h => h.name === 'Subject')?.value || '(no subject)';
-    const snippet = data.snippet || '';
+    headers: {
+          Authorization: 'Bearer ${accessToken}'
+        }
+      });
+        const data=await response.json();
+        const headers = data.payload.headers;
+        const from = headers.find(h => h.name === 'From')?.value || 'Unknown sender';
+        const subject = headers.find(h => h.name === 'Subject')?.value || '(no subject)';
+        const snippet = data.snippet || '';
 
-    return { sender: from, subject, snippet };
-  }
+        return{sender: from,subject,snippet};
 
-  function categorizeEmail(subject, snippet) {
-    const text = (subject + ' ' + snippet).toLowerCase();
-    if (text.includes('unsubscribe') || text.includes('% off') || text.includes('winner') || text.includes('prize')) {
-      return 'junk';
-    }
-    if (text.includes('newsletter') || text.includes('digest') || text.includes('weekly')) {
+     }
+
+   function categorizeEmail(subject, snippet){
+     const text=(subject + ' '+snippet).toLowerCase();
+     if(text.includes('unsubscribe') || text.includes('%off') || text.includes('winner') || text.includes('prize')){
+        return 'junk';
+     }
+
+     if(text.includes('newsletter') || text.includes('digest')|| text.includes('weekly')){
       return 'fyi';
-    }
-    return 'reply';
-  }
+     }
+     return reply;
+   }
+        
 
-  const MOCK_EMAILS = [
-    { sender: "Priya Shah", subject: "Q3 budget review — need your notes", snippet: "Can you send your section before Thursday's call?", category: "reply" },
-    { sender: "GitHub", subject: "Security alert on your repo", snippet: "A dependency has a known vulnerability.", category: "reply" },
-    { sender: "DealBlast Deals", subject: "70% OFF everything, today only!!!", snippet: "Don't miss this one-time offer...", category: "junk" },
-    { sender: "TotallyRealPrizes", subject: "You've won a gift card", snippet: "Click here to claim your reward", category: "junk" },
-    { sender: "Substack Digest", subject: "This week's top 5 reads", snippet: "Curated picks from writers you follow.", category: "fyi" },
-    { sender: "Team Calendar", subject: "Weekly sync notes", snippet: "Here's a recap of what we covered.", category: "fyi" }
-  ];
 
   function addMessage(role, html) {
     const messages = document.getElementById('messages');
@@ -550,7 +568,68 @@
     fireConfetti();
     playChime();
   }
-
+const TAB_INFO = {
+    overview: { title: 'Overview', subtitle: "Ask Sift to check your inbox below — nothing sends or deletes without you saying so." },
+    reply: { title: 'Needs Reply', subtitle: 'Emails that look like they need a response from you.' },
+    junk: { title: 'Junk', subtitle: 'Emails that look like spam or promotions.' },
+    fyi: { title: 'Newsletters', subtitle: "Digests and newsletters — no action needed." },
+    settings: { title: 'Settings', subtitle: 'Manage how Sift fetches and sorts your inbox.' }
+  };
+ 
+  function switchTab(tab) {
+    document.querySelectorAll('.nav-item').forEach(item => item.classList.toggle('active', item.dataset.tab === tab));
+ 
+    const info = TAB_INFO[tab];
+    document.querySelector('.top-bar h2').textContent = info.title;
+    document.querySelector('.top-bar .subtitle').textContent = info.subtitle;
+ 
+    document.getElementById('chatPanel').style.display = tab === 'overview' ? 'flex' : 'none';
+    document.getElementById('listPanel').style.display = ['reply', 'junk', 'fyi'].includes(tab) ? 'flex' : 'none';
+    document.getElementById('settingsPanel').style.display = tab === 'settings' ? 'flex' : 'none';
+ 
+    if (['reply', 'junk', 'fyi'].includes(tab)) {
+      renderListPanel(tab);
+    }
+  }
+ 
+  function renderListPanel(category) {
+    const emailsToShow = (window.REAL_EMAILS || MOCK_EMAILS).filter(e => e.category === category);
+    const listEl = document.getElementById('listPanelContent');
+    if (emailsToShow.length === 0) {
+      listEl.innerHTML = '<div class="empty-state">Nothing here yet. Ask Sift to check your inbox from Overview, or hit Refresh.</div>';
+      return;
+    }
+    listEl.innerHTML = emailsToShow.map(e =>
+      '<div class="email-card">' +
+        '<div class="email-top"><span class="email-sender">' + e.sender + '</span>' + badgeLabel(e.category) + '</div>' +
+        '<div class="email-subject">' + e.subject + '</div>' +
+        '<div class="email-snippet">' + e.snippet + '</div>' +
+      '</div>'
+    ).join('');
+  }
+ 
+  async function refreshInbox() {
+    const listEl = document.getElementById('listPanelContent');
+    listEl.innerHTML = '<div class="empty-state">Loading…</div>';
+    await listMessages();
+    const activeTab = document.querySelector('.nav-item.active').dataset.tab;
+    if (['reply', 'junk', 'fyi'].includes(activeTab)) renderListPanel(activeTab);
+  }
+ 
+  function saveEmailLimit() {
+    const input = document.getElementById('emailLimitInput');
+    let val = parseInt(input.value, 10);
+    if (isNaN(val)) val = 25;
+    val = Math.min(100, Math.max(5, val));
+    input.value = val;
+    localStorage.setItem('siftEmailLimit', val);
+    document.getElementById('settingsStatus').textContent = 'Saved — Sift will pull up to ' + val + ' inbox emails on the next check.';
+  }
+ 
+  document.addEventListener('DOMContentLoaded', () => {
+    const input = document.getElementById('emailLimitInput');
+    if (input) input.value = getEmailLimit();
+  });
   function badgeLabel(cat) {
     if (cat === 'reply') return '<span class="badge reply">Needs Reply</span>';
     if (cat === 'junk') return '<span class="badge junk">Junk</span>';
@@ -558,7 +637,20 @@
   }
 
   function renderInboxResults() {
-    const emailsToShow = window.REAL_EMAILS || MOCK_EMAILS;
+    if (window.INBOX_ERROR) {
+      addMessage('bot', "I couldn't load your inbox just now. Try asking me to check again.");
+      return;
+    }
+    if (!window.REAL_EMAILS) {
+      addMessage('bot', "Still loading your inbox — give it a second and ask again.");
+      return;
+    }
+    const emailsToShow = window.REAL_EMAILS;
+    if (emailsToShow.length === 0) {
+      addMessage('bot', "Your inbox looks clear — nothing to sort right now.");
+      return;
+    }
+
     const replyCount = emailsToShow.filter(e => e.category === 'reply').length;
     const junkCount = emailsToShow.filter(e => e.category === 'junk').length;
     const fyiCount = emailsToShow.filter(e => e.category === 'fyi').length;
