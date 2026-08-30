@@ -1,4 +1,3 @@
-
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -415,7 +414,7 @@
       </div>
       <div class="settings-field">
         <label for="emailLimitInput">Emails to pull from inbox each check</label>
-        <input id="emailLimitInput" type="number" min="5" max="100" onchange="saveEmailLimit()">
+        <input id="emailLimitInput" type="number" min="10" max="15" onchange="saveEmailLimit()">
       </div>
       <div id="settingsStatus"></div>
       <div class="settings-field">
@@ -483,7 +482,7 @@
  
   function getEmailLimit() {
     const stored = parseInt(localStorage.getItem('siftEmailLimit'), 10);
-    return (!isNaN(stored) && stored >= 5 && stored <= 100) ? stored : 25;
+    return (!isNaN(stored) && stored >= 10 && stored <= 15) ? stored : 10;
   }
  
   async function listMessages() {
@@ -726,8 +725,8 @@
   function saveEmailLimit() {
     const input = document.getElementById('emailLimitInput');
     let val = parseInt(input.value, 10);
-    if (isNaN(val)) val = 25;
-    val = Math.min(100, Math.max(5, val));
+    if (isNaN(val)) val = 10;
+    val = Math.min(15, Math.max(10, val));
     input.value = val;
     localStorage.setItem('siftEmailLimit', val);
     document.getElementById('settingsStatus').textContent = 'Saved — Sift will pull up to ' + val + ' inbox emails on the next check.';
