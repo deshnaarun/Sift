@@ -329,6 +329,11 @@
   }
   .settings-field input:focus { border-color: var(--orange); outline: none; }
   #settingsStatus { font-size: 13px; color: var(--fyi); min-height: 16px; }
+  .connected-account {
+    font-size: 14px;
+    font-weight: 600;
+    color: var(--ink);
+  }
 </style>
 </head>
 <body>
@@ -404,17 +409,24 @@
 
     <div class="settings-panel" id="settingsPanel">
       <div class="settings-field">
+        <label>Connected account</label>
+        <div id="connectedAccount" class="connected-account">—</div>
+      </div>
+      <div class="settings-field">
         <label for="emailLimitInput">Emails to pull from inbox each check</label>
         <input id="emailLimitInput" type="number" min="5" max="100" onchange="saveEmailLimit()">
       </div>
       <div id="settingsStatus"></div>
+      <div class="settings-field">
+        <button class="quick-btn" onclick="signOut()">Sign out</button>
+      </div>
     </div>
   </div>
 </div>
 
 <script>
   const CLIENT_ID = "1019155607119-am2tsldmp30o9pkvgcggd0s87t8v0g64.apps.googleusercontent.com";
-  const SCOPES = "https://www.googleapis.com/auth/gmail.readonly https://www.googleapis.com/auth/gmail.modify https://www.googleapis.com/auth/gmail.send";
+  const SCOPES = "https://www.googleapis.com/auth/gmail.readonly https://www.googleapis.com/auth/gmail.modify https://www.googleapis.com/auth/gmail.send https://www.googleapis.com/auth/userinfo.email";
   let accessToken = null;
 
   function signInWithGoogle(){
@@ -428,10 +440,44 @@
           document.getElementById('dashboard').style.display = 'flex';
           addMessage('bot', "You're connected! Ask me to check your inbox whenever you're ready");
           listMessages();
+          loadConnectedAccount();
         }
       },
     });
     tokenClient.requestAccessToken();
+  }
+
+  async function loadConnectedAccount() {
+    const el = document.getElementById('connectedAccount');
+    try {
+      const response = await fetch('https://www.googleapis.com/oauth2/v3/userinfo', {
+        headers: { Authorization: `Bearer ${accessToken}` }
+      });
+      const data = await response.json();
+      el.textContent = data.email || 'Unknown account';
+    } catch (e) {
+      el.textContent = 'Unable to load account info';
+    }
+  }
+
+  function signOut() {
+    const token = accessToken;
+    accessToken = null;
+    window.REAL_EMAILS = undefined;
+    window.INBOX_ERROR = false;
+    document.getElementById('connectedAccount').textContent = '—';
+    document.getElementById('messages').innerHTML =
+      '<div class="msg-row bot"><div class="avatar">🌾</div><div class="bubble">' +
+      "Hey! I'm SwiftSift. Ask me to check your inbox and I'll sort what needs a reply, what's junk, and what's just FYI." +
+      '<div class="quick-actions"><div class="quick-btn" onclick="sendQuick(\'Check my inbox\')">Check my inbox</div></div>' +
+      '</div></div>';
+    document.getElementById('listPanelContent').innerHTML = '';
+    document.getElementById('dashboard').style.display = 'none';
+    document.getElementById('loginScreen').style.display = 'flex';
+    switchTab('overview');
+    if (token && google.accounts.oauth2.revoke) {
+      google.accounts.oauth2.revoke(token, () => {});
+    }
   }
 
   function getEmailLimit() {
