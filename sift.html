@@ -227,6 +227,21 @@
   .badge.junk { background: #fbdedb; color: var(--junk); }
   .badge.fyi { background: #d7f2e3; color: var(--fyi); }
  
+  .email-actions { display: flex; align-items: center; gap: 8px; }
+  .trash-btn {
+    background: transparent;
+    border: none;
+    font-size: 14px;
+    line-height: 1;
+    padding: 2px;
+    cursor: pointer;
+    border-radius: 6px;
+    transition: background 0.15s ease, transform 0.1s ease;
+  }
+  .trash-btn:hover { background: var(--cream); transform: scale(1.1); }
+  .trash-btn:active { transform: scale(0.95); }
+  .email-card.removing { opacity: 0.4; pointer-events: none; }
+ 
   .quick-actions { display: flex; gap: 8px; margin-top: 10px; flex-wrap: wrap; }
   .quick-btn {
     background: #fff;
@@ -485,34 +500,144 @@
     return (!isNaN(stored) && stored >= 10 && stored <= 15) ? stored : 10;
   }
  
+  const JUNK_BATCH_SIZE = 25;
+ 
+  function getPaginationState(stateKey) {
+    try {
+      return JSON.parse(localStorage.getItem(stateKey)) || { unreadToken: null, unreadDone: false, readToken: null };
+    } catch (e) {
+      return { unreadToken: null, unreadDone: false, readToken: null };
+    }
+  }
+ 
+  function savePaginationState(stateKey, state) {
+    localStorage.setItem(stateKey, JSON.stringify(state));
+  }
+ 
+  async function fetchGmailPage(query, pageToken, maxResults) {
+    const params = new URLSearchParams({ q: query, maxResults: String(maxResults) });
+    if (pageToken) params.set('pageToken', pageToken);
+    const response = await fetch(`https://gmail.googleapis.com/gmail/v1/users/me/messages?${params}`, {
+      headers: { Authorization: `Bearer ${accessToken}` }
+    });
+    const data = await response.json();
+    return { messages: data.messages || [], nextPageToken: data.nextPageToken || null };
+  }
+ 
+  // Fetches the next batch of `limit` inbox messages for the given cursor,
+  // unread mail first, falling back to already-read mail to fill the batch.
+  // Each cursor (stateKey) tracks its own position so repeated checks surface
+  // new emails instead of the same ones, and wraps back to the top once the
+  // whole inbox has been covered.
+  async function fetchInboxBatch(stateKey, limit) {
+    let state = getPaginationState(stateKey);
+    let messageRefs = [];
+ 
+    if (!state.unreadDone) {
+      const page = await fetchGmailPage('in:inbox is:unread', state.unreadToken, limit);
+      messageRefs = page.messages;
+      state.unreadToken = page.nextPageToken;
+      if (!page.nextPageToken) state.unreadDone = true;
+    }
+ 
+    if (messageRefs.length < limit) {
+      const remaining = limit - messageRefs.length;
+      const page = await fetchGmailPage('in:inbox -is:unread', state.readToken, remaining);
+      messageRefs = messageRefs.concat(page.messages);
+      state.readToken = page.nextPageToken;
+      if (!page.nextPageToken) {
+        state = { unreadToken: null, unreadDone: false, readToken: null };
+      }
+    }
+ 
+    savePaginationState(stateKey, state);
+    return messageRefs;
+  }
+ 
+  async function fetchAndCategorize(messageRefs) {
+    const emails = [];
+    for (const msg of messageRefs) {
+      const details = await getMessageDetails(msg.id);
+      emails.push({ id: msg.id, ...details });
+    }
+    return categorizeEmails(emails);
+  }
+ 
   async function listMessages() {
     const limit = getEmailLimit();
     window.INBOX_ERROR = false;
     try {
-      const response = await fetch(`https://gmail.googleapis.com/gmail/v1/users/me/messages?maxResults=${limit}&labelIds=INBOX`, {
-        headers: {
-          Authorization: `Bearer ${accessToken}`
-        }
-      });
- 
-      const data = await response.json();
-      if (!data.messages) {
-        console.log("No messages found or error:", data);
+      const messageRefs = await fetchInboxBatch('siftPagination', limit);
+      if (messageRefs.length === 0) {
         window.REAL_EMAILS = [];
         return;
       }
- 
-      const emails = [];
-      for (const msg of data.messages) {
-        const details = await getMessageDetails(msg.id);
-        const category = categorizeEmail(details.subject, details.snippet);
-        emails.push({ ...details, category });
-      }
- 
-      window.REAL_EMAILS = emails;
+      window.REAL_EMAILS = await fetchAndCategorize(messageRefs);
     } catch (e) {
       console.error('Failed to fetch inbox:', e);
       window.INBOX_ERROR = true;
+    }
+  }
+ 
+  async function refreshJunkQueue() {
+    window.JUNK_ERROR = false;
+    try {
+      const messageRefs = await fetchInboxBatch('siftJunkPagination', JUNK_BATCH_SIZE);
+      if (messageRefs.length === 0) {
+        window.JUNK_QUEUE = [];
+        return;
+      }
+      const categorized = await fetchAndCategorize(messageRefs);
+      window.JUNK_QUEUE = categorized.filter(e => e.category === 'junk');
+    } catch (e) {
+      console.error('Failed to fetch junk:', e);
+      window.JUNK_ERROR = true;
+    }
+  }
+ 
+  async function deleteJunkEmail(id) {
+    const card = document.querySelector('.email-card[data-id="' + id + '"]');
+    if (card) card.classList.add('removing');
+    try {
+      const response = await fetch(`https://gmail.googleapis.com/gmail/v1/users/me/messages/${id}/trash`, {
+        method: 'POST',
+        headers: { Authorization: `Bearer ${accessToken}` }
+      });
+      if (!response.ok) throw new Error('Trash request failed: ' + response.status);
+      window.JUNK_QUEUE = (window.JUNK_QUEUE || []).filter(e => e.id !== id);
+      if (card) card.remove();
+      if ((window.JUNK_QUEUE || []).length === 0) renderJunkList();
+    } catch (e) {
+      console.error('Failed to trash email:', e);
+      if (card) {
+        card.classList.remove('removing');
+        card.title = "Couldn't delete — try again";
+      }
+    }
+  }
+ 
+  const CATEGORIZE_API_URL = 'https://YOUR-WORKER-SUBDOMAIN.workers.dev';
+ 
+  async function categorizeEmails(emails) {
+    try {
+      const response = await fetch(CATEGORIZE_API_URL, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          emails: emails.map(e => ({ id: e.id, subject: e.subject, snippet: e.snippet }))
+        })
+      });
+      if (!response.ok) throw new Error('Categorize request failed: ' + response.status);
+      const data = await response.json();
+      const categoryById = {};
+      data.results.forEach(r => { categoryById[r.id] = r.category; });
+      return emails.map(e => ({
+        ...e,
+        category: categoryById[e.id] || categorizeEmail(e.subject, e.snippet)
+      }));
+    } catch (e) {
+      console.error('Claude categorization failed, falling back to keyword rules:', e);
+      return emails.map(e => ({ ...e, category: categorizeEmail(e.subject, e.snippet) }));
     }
   }
  
@@ -685,7 +810,9 @@
     document.getElementById('listPanel').style.display = ['reply', 'junk', 'fyi'].includes(tab) ? 'flex' : 'none';
     document.getElementById('settingsPanel').style.display = tab === 'settings' ? 'flex' : 'none';
  
-    if (['reply', 'junk', 'fyi'].includes(tab)) {
+    if (tab === 'junk') {
+      renderJunkPanel();
+    } else if (['reply', 'fyi'].includes(tab)) {
       renderListPanel(tab);
     }
   }
@@ -714,12 +841,51 @@
     ).join('');
   }
  
+  // Junk gets its own dedicated, larger batch (JUNK_BATCH_SIZE) instead of
+  // sharing Overview's smaller rolling window, since cleanup is the point.
+  async function renderJunkPanel() {
+    const listEl = document.getElementById('listPanelContent');
+    listEl.innerHTML = '<div class="empty-state">Loading…</div>';
+    await refreshJunkQueue();
+    renderJunkList();
+  }
+ 
+  function renderJunkList() {
+    const listEl = document.getElementById('listPanelContent');
+    if (window.JUNK_ERROR) {
+      listEl.innerHTML = '<div class="empty-state">Couldn\'t load junk emails. Hit Refresh to try again.</div>';
+      return;
+    }
+    const emailsToShow = window.JUNK_QUEUE || [];
+    if (emailsToShow.length === 0) {
+      listEl.innerHTML = '<div class="empty-state">No junk in this batch. Hit Refresh to check more.</div>';
+      return;
+    }
+    listEl.innerHTML = emailsToShow.map(e =>
+      '<div class="email-card" data-id="' + e.id + '">' +
+        '<div class="email-top"><span class="email-sender">' + e.sender + '</span>' +
+          '<span class="email-actions">' + badgeLabel(e.category) +
+          '<button class="trash-btn" onclick="deleteJunkEmail(\'' + e.id + '\')" title="Move to trash">🗑️</button></span>' +
+        '</div>' +
+        '<div class="email-subject">' + e.subject + '</div>' +
+        '<div class="email-snippet">' + e.snippet + '</div>' +
+      '</div>'
+    ).join('');
+  }
+ 
   async function refreshInbox() {
+    const activeTab = document.querySelector('.nav-item.active').dataset.tab;
+    if (activeTab === 'junk') {
+      const listEl = document.getElementById('listPanelContent');
+      listEl.innerHTML = '<div class="empty-state">Loading…</div>';
+      await refreshJunkQueue();
+      renderJunkList();
+      return;
+    }
     const listEl = document.getElementById('listPanelContent');
     listEl.innerHTML = '<div class="empty-state">Loading…</div>';
     await listMessages();
-    const activeTab = document.querySelector('.nav-item.active').dataset.tab;
-    if (['reply', 'junk', 'fyi'].includes(activeTab)) renderListPanel(activeTab);
+    if (['reply', 'fyi'].includes(activeTab)) renderListPanel(activeTab);
   }
  
   function saveEmailLimit() {
