@@ -10,7 +10,7 @@
 // console.groq.com/docs/models for a current model name and swap it in.
 
 const ALLOWED_ORIGIN = "https://deshnaarun.github.io";
-const GROQ_MODEL = "llama-3.3-70b-versatile";
+const GROQ_MODEL = "llama-3.1-8b-instant";
 
 const SYSTEM_PROMPT = `You sort a user's inbox emails into exactly one of three categories:
 - "reply": a real message from a person or service that likely needs a response or action from the user
