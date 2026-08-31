@@ -547,11 +547,10 @@
   }
  
   async function fetchAndCategorize(messageRefs) {
-    const emails = [];
-    for (const msg of messageRefs) {
+    const emails = await Promise.all(messageRefs.map(async msg => {
       const details = await getMessageDetails(msg.id);
-      emails.push({ id: msg.id, ...details });
-    }
+      return { id: msg.id, ...details };
+    }));
     return categorizeEmails(emails);
   }
  
@@ -576,7 +575,7 @@
   // (SCAN_CAP is just a safety ceiling so this can't run forever).
   async function refreshJunkQueue() {
     window.JUNK_ERROR = false;
-    const SCAN_CAP = 300;
+    const SCAN_CAP = 100;
     try {
       const junkFound = [];
       const seenIds = new Set();
@@ -626,17 +625,25 @@
     }
   }
  
-  const CATEGORIZE_API_URL = 'https://YOUR-WORKER-SUBDOMAIN.workers.dev';
+  const CATEGORIZE_API_URL = 'https://sift.deshnaarun.workers.dev';
  
   async function categorizeEmails(emails) {
     try {
-      const response = await fetch(CATEGORIZE_API_URL, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          emails: emails.map(e => ({ id: e.id, subject: e.subject, snippet: e.snippet }))
-        })
-      });
+      const controller = new AbortController();
+      const timeout = setTimeout(() => controller.abort(), 5000);
+      let response;
+      try {
+        response = await fetch(CATEGORIZE_API_URL, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            emails: emails.map(e => ({ id: e.id, subject: e.subject, snippet: e.snippet }))
+          }),
+          signal: controller.signal
+        });
+      } finally {
+        clearTimeout(timeout);
+      }
       if (!response.ok) throw new Error('Categorize request failed: ' + response.status);
       const data = await response.json();
       const categoryById = {};
@@ -646,7 +653,7 @@
         category: categoryById[e.id] || categorizeEmail(e.subject, e.snippet)
       }));
     } catch (e) {
-      console.error('Claude categorization failed, falling back to keyword rules:', e);
+      console.error('Categorization failed, falling back to keyword rules:', e);
       return emails.map(e => ({ ...e, category: categorizeEmail(e.subject, e.snippet) }));
     }
   }
