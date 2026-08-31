@@ -502,18 +502,6 @@
  
   const JUNK_BATCH_SIZE = 25;
  
-  function getPaginationState(stateKey) {
-    try {
-      return JSON.parse(localStorage.getItem(stateKey)) || { unreadToken: null, unreadDone: false, readToken: null };
-    } catch (e) {
-      return { unreadToken: null, unreadDone: false, readToken: null };
-    }
-  }
- 
-  function savePaginationState(stateKey, state) {
-    localStorage.setItem(stateKey, JSON.stringify(state));
-  }
- 
   async function fetchGmailPage(query, pageToken, maxResults) {
     const params = new URLSearchParams({ q: query, maxResults: String(maxResults) });
     if (pageToken) params.set('pageToken', pageToken);
@@ -524,34 +512,20 @@
     return { messages: data.messages || [], nextPageToken: data.nextPageToken || null };
   }
  
-  // Fetches the next batch of `limit` inbox messages for the given cursor,
-  // unread mail first, falling back to already-read mail to fill the batch.
-  // Each cursor (stateKey) tracks its own position so repeated checks surface
-  // new emails instead of the same ones, and wraps back to the top once the
-  // whole inbox has been covered.
-  async function fetchInboxBatch(stateKey, limit) {
-    let state = getPaginationState(stateKey);
-    let messageRefs = [];
+  // Overview only ever looks at unread mail — that's the whole point of
+  // "does this need a reply." Paginated forward each check, wrapping back
+  // to the top once every unread email has been covered.
+  async function fetchUnreadBatch(limit) {
+    const key = 'siftPagination';
+    let token = null;
+    try {
+      const state = JSON.parse(localStorage.getItem(key));
+      token = (state && state.token) || null;
+    } catch (e) { /* ignore, start from the top */ }
  
-    if (!state.unreadDone) {
-      const page = await fetchGmailPage('in:inbox is:unread', state.unreadToken, limit);
-      messageRefs = page.messages;
-      state.unreadToken = page.nextPageToken;
-      if (!page.nextPageToken) state.unreadDone = true;
-    }
- 
-    if (messageRefs.length < limit) {
-      const remaining = limit - messageRefs.length;
-      const page = await fetchGmailPage('in:inbox -is:unread', state.readToken, remaining);
-      messageRefs = messageRefs.concat(page.messages);
-      state.readToken = page.nextPageToken;
-      if (!page.nextPageToken) {
-        state = { unreadToken: null, unreadDone: false, readToken: null };
-      }
-    }
- 
-    savePaginationState(stateKey, state);
-    return messageRefs;
+    const page = await fetchGmailPage('in:inbox is:unread', token, limit);
+    localStorage.setItem(key, JSON.stringify({ token: page.nextPageToken || null }));
+    return page.messages;
   }
  
   // Junk pulls straight through the whole inbox (read and unread mixed) —
@@ -585,7 +559,7 @@
     const limit = getEmailLimit();
     window.INBOX_ERROR = false;
     try {
-      const messageRefs = await fetchInboxBatch('siftPagination', limit);
+      const messageRefs = await fetchUnreadBatch(limit);
       if (messageRefs.length === 0) {
         window.REAL_EMAILS = [];
         return;
