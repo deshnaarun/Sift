@@ -17,6 +17,8 @@ const SYSTEM_PROMPT = `You sort a user's inbox emails into exactly one of three 
 - "junk": marketing, promotions, spam, or anything pushing a sale/discount/prize
 - "fyi": newsletters, digests, automated notifications, or anything informational needing no action
 
+Watch for marketing emails disguised as personal messages — a "Re:" or "Fwd:" prefix on a first contact, the recipient's first name used as a hook, or a leading rhetorical question ("Are these the projects your home needs?") are sales tactics designed to look like a real reply thread. These are "junk," not "reply," regardless of the personalized framing — judge by the actual content (services/pricing pitch, no real prior conversation), not the subject line's formatting.
+
 Classify every email you're given. Be decisive — always pick exactly one category per email.
 
 Respond with ONLY a JSON object of this exact shape, no other text:
