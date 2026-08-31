@@ -554,6 +554,24 @@
     return messageRefs;
   }
  
+  // Junk pulls straight through the whole inbox (read and unread mixed) —
+  // no unread-first split — in raw chunks, continuing forward each call.
+  // Reports `wrapped: true` once it's reached the end of the inbox, so the
+  // caller knows a full pass has completed.
+  async function fetchJunkBatch(chunkSize) {
+    const key = 'siftJunkPagination';
+    let token = null;
+    try {
+      const state = JSON.parse(localStorage.getItem(key));
+      token = (state && state.token) || null;
+    } catch (e) { /* ignore, start from the top */ }
+ 
+    const page = await fetchGmailPage('in:inbox', token, chunkSize);
+    const wrapped = !page.nextPageToken;
+    localStorage.setItem(key, JSON.stringify({ token: page.nextPageToken || null }));
+    return { messages: page.messages, wrapped };
+  }
+ 
   async function fetchAndCategorize(messageRefs) {
     const emails = [];
     for (const msg of messageRefs) {
@@ -579,16 +597,34 @@
     }
   }
  
+  // Keeps pulling 25-email chunks and scanning them until it has collected
+  // JUNK_BATCH_SIZE junk emails, or it has scanned the whole inbox once
+  // (SCAN_CAP is just a safety ceiling so this can't run forever).
   async function refreshJunkQueue() {
     window.JUNK_ERROR = false;
+    const SCAN_CAP = 300;
     try {
-      const messageRefs = await fetchInboxBatch('siftJunkPagination', JUNK_BATCH_SIZE);
-      if (messageRefs.length === 0) {
-        window.JUNK_QUEUE = [];
-        return;
+      const junkFound = [];
+      const seenIds = new Set();
+      let scanned = 0;
+ 
+      while (junkFound.length < JUNK_BATCH_SIZE && scanned < SCAN_CAP) {
+        const { messages, wrapped } = await fetchJunkBatch(25);
+        if (messages.length === 0) break;
+        scanned += messages.length;
+ 
+        const categorized = await fetchAndCategorize(messages);
+        categorized.forEach(e => {
+          if (e.category === 'junk' && !seenIds.has(e.id)) {
+            seenIds.add(e.id);
+            junkFound.push(e);
+          }
+        });
+ 
+        if (wrapped) break; // completed one full pass through the inbox
       }
-      const categorized = await fetchAndCategorize(messageRefs);
-      window.JUNK_QUEUE = categorized.filter(e => e.category === 'junk');
+ 
+      window.JUNK_QUEUE = junkFound.slice(0, JUNK_BATCH_SIZE);
     } catch (e) {
       console.error('Failed to fetch junk:', e);
       window.JUNK_ERROR = true;
